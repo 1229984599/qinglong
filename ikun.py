@@ -14,10 +14,10 @@ session = requests.session()
 
 # 登录
 def login(username, password):
-    url = "https://ikuuu.art/auth/login"
+    url = "https://ikuuu.pw/auth/login"
 
     headers = {
-        "authority": "ikuuu.art",
+        "authority": "ikuuu.pw",
         "content-type": "application/x-www-form-urlencoded",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.41"
     }
@@ -32,7 +32,7 @@ def login(username, password):
 
 
 def check_in():
-    url = "https://ikuuu.art/user/checkin"
+    url = "https://ikuuu.pw/user/checkin"
     response = session.post(url)
     print(response.json())
 

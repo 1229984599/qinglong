@@ -7,8 +7,9 @@
 # cron "0 9 * * *" script-path=glados.py,tag=GLaDOS自动签到
 # glados_cookie
 
-import requests, os
 import json
+import os
+import requests
 
 # 获取glados账号对应cookie（在青龙面板的环境变量中设置galdos_cookie）
 cookie = os.environ["glados_cookie"]
