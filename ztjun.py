@@ -7,6 +7,7 @@
 # cron "0 6 * * *" script-path=ztjun.py,tag=ztjun博客签到
 # 支持多账户：account#password@account2#password2
 import os
+import re
 import time
 
 import requests
@@ -32,10 +33,11 @@ class Ztjun:
     def login(self, username='', password=''):
         url = "https://ztjun.fun/wp-admin/admin-ajax.php"
         payload = {
-            'action': 'user_login',
-            'username': username or self.username,
-            'password': password or self.password,
-            'rememberme': '1'
+            'action': 'zb_user_login',
+            'user_name': username or self.username,
+            'user_password': password or self.password,
+            'rememberme': 'on',
+            'nonce': self._get_nonce()
         }
 
         response = self.session.post(url, data=payload)
@@ -48,8 +50,12 @@ class Ztjun:
         response = self.session.get(url)
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
-        nonce = soup.select_one('.go-user-qiandao').get('data-nonce')
-        return nonce
+        script_tag = soup.find('script', {'id': 'main-js-extra'})
+        if script_tag:
+            script_text = script_tag.string
+            match = re.search(r'"ajax_nonce":"(.*?)",', script_text)
+            return match.group(1)
+        raise Exception("未找到nonce")
 
     def sign(self):
         self.login()
@@ -57,7 +63,7 @@ class Ztjun:
         url = "https://ztjun.fun/wp-admin/admin-ajax.php"
         # payload = f"action=user_qiandao&nonce={nonce}"
         payload = {
-            'action': 'user_qiandao',
+            'action': 'zb_user_qiandao',
             'nonce': nonce
         }
         response = self.session.post(url, data=payload)
