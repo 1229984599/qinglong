@@ -2,10 +2,10 @@
 # -- coding: utf-8 --
 # -------------------------------
 # @Author : moxiaoying
-# @Time : 2025/01/27 13:23
+# @Time : 2025/01/17 13:23
 # -------------------------------
 # cron "1 * * * *" script-path=serv00.py,tag=serv00注册
-# 支持多账户：SERV00_INFO="ocr_url=***;first_name=***;last_name=***;username=***;email=***@gmail.com;"
+# 支持多账户：serv00_cookie="ocr_url=***;first_name=***;last_name=***;username=***;email=***@gmail.com;proxies=127.0.0.1:7890;"
 
 import requests
 import json
@@ -115,7 +115,7 @@ class Serv00Register:
         return response.json()
 
     def register(self, first_name: str, last_name: str,
-                 username: str, email: str) -> Dict[str, Any]:
+                 username: str, email: str, max_retries: int = 3) -> Dict[str, Any]:
         """
         执行注册流程
         
@@ -124,6 +124,7 @@ class Serv00Register:
             last_name: 姓
             username: 用户名
             email: 邮箱
+            max_retries: 验证码重试最大次数
             
         Returns:
             注册响应结果
@@ -131,65 +132,111 @@ class Serv00Register:
         try:
             logger.info(f"开始注册流程 - 用户名: {username}, 邮箱: {email}")
 
-            # 获取token和验证码key
-            logger.info("正在获取初始化令牌...")
-            csrf_token, captcha_key = self._get_initial_tokens()
-            logger.info(f"成功获取令牌 - captcha_key: {captcha_key}")
+            for attempt in range(max_retries):
+                try:
+                    # 获取token和验证码key
+                    logger.info("正在获取初始化令牌...")
+                    csrf_token, captcha_key = self._get_initial_tokens()
+                    logger.info(f"成功获取令牌 - captcha_key: {captcha_key}")
 
-            # 获取并识别验证码
-            logger.info("正在获取验证码图片...")
-            image_data = self._get_captcha_image(captcha_key)
-            logger.info("正在识别验证码...")
-            captcha_result = self._recognize_captcha(image_data)
-            logger.info(f"验证码识别结果: {captcha_result}")
+                    # 获取并识别验证码
+                    logger.info("正在获取验证码图片...")
+                    image_data = self._get_captcha_image(captcha_key)
+                    logger.info("正在识别验证码...")
+                    captcha_result = self._recognize_captcha(image_data)
+                    logger.info(f"验证码识别结果: {captcha_result}")
 
-            # 构建注册数据
-            register_data = {
-                "csrfmiddlewaretoken": csrf_token,
-                "first_name": first_name,
-                "last_name": last_name,
-                "username": username,
-                "email": email,
-                "captcha_0": captcha_key,
-                "captcha_1": captcha_result,
-                "question": "0",
-                "tos": "on",
-            }
+                    # 构建注册数据
+                    register_data = {
+                        "csrfmiddlewaretoken": csrf_token,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "username": username,
+                        "email": email,
+                        "captcha_0": captcha_key,
+                        "captcha_1": captcha_result,
+                        "question": "0",
+                        "tos": "on",
+                    }
 
-            # 提交注册
-            logger.info("正在提交注册请求...")
-            response = self._register_account(register_data)
-            self._handle_response(response)
-            return response
+                    # 提交注册
+                    logger.info("正在提交注册请求...")
+                    response = self._register_account(register_data)
+
+                    # 如果验证码无效，则重试
+                    if "captcha" in response and "Invalid CAPTCHA" in response["captcha"]:
+                        if attempt < max_retries - 1:  # 还有重试机会
+                            logger.warning(f"验证码无效，正在进行第 {attempt + 2} 次尝试...")
+                            # 使用响应中的新验证码key
+                            captcha_key = response["__captcha_key"]
+                            continue
+                        else:
+                            logger.error("验证码重试次数已达上限")
+
+                    self._handle_response(response)
+                    return response
+
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"第 {attempt + 1} 次尝试失败: {str(e)}, 正在重试...")
+                        continue
+                    raise
 
         except Exception as e:
             logger.error(f"注册过程出错: {str(e)}")
             raise
 
-    @staticmethod
-    def _handle_response(response: Dict[str, Any]) -> None:
+    def _handle_response(self, response: Dict[str, Any]) -> None:
         """处理注册响应"""
-        if "username" in response and "Maintenance time" in response["username"]:
-            logger.warning("注册失败: 系统维护中，请稍后重试")
-        elif "username" in response:
-            logger.success("注册成功！")
+        if "username" in response:
+            if "Maintenance time" in response["username"]:
+                logger.warning("注册失败: 系统维护中，请稍后重试")
+            elif "account limit" in response["username"]:
+                logger.warning("注册失败: 服务器账户数量已达上限，请稍后重试")
+            else:
+                logger.success("注册成功！")
+        elif "captcha" in response and "Invalid CAPTCHA" in response["captcha"]:
+            logger.warning("验证码无效")
+            logger.debug(f"新的验证码key: {response['__captcha_key']}")
+            logger.debug(f"新的验证码图片: {self.base_url}{response['__captcha_image_src']}")
         else:
             logger.warning("收到未知响应")
         logger.debug(f"完整响应: {json.dumps(response, indent=4, ensure_ascii=False)}")
 
 
+def _parse_proxy(proxy_str: str) -> Dict[str, str]:
+    """
+    解析代理字符串为代理配置字典
+    
+    支持的格式:
+    - 域名:端口 (例如: 127.0.0.1:7890)
+    - 完整URL (例如: http://127.0.0.1:7890)
+    """
+    if not proxy_str:
+        return {"http": None, "https": None}
+
+    # 如果没有指定协议，默认添加 http:// 前缀
+    if not proxy_str.startswith(('http://', 'https://')):
+        proxy_str = f"http://{proxy_str}"
+
+    return {
+        "http": proxy_str,
+        "https": proxy_str
+    }
+
+
 def main():
     """主函数示例"""
     logger.info("============= 开始执行 Serv00 注册任务 =============")
-    
+
     try:
         # 从环境变量获取隐私信息
-        env_str = os.getenv('SERV00_INFO', '')
+        env_str = os.getenv('serv00_cookie', '')
         if not env_str:
-            logger.error("环境变量 SERV00_INFO 未设置")
+            logger.error("环境变量 serv00_cookie 未设置")
             raise ValueError(
-                "请设置 SERV00_INFO 环境变量，格式为: first_name=xxx;last_name=xxx;username=xxx;email=xxx;ocr_url=xxx;")
-        
+                "请设置 serv00_cookie 环境变量，格式为: first_name=xxx;last_name=xxx;username=xxx;email=xxx;ocr_url=xxx;proxies=xxx;")
+
         # 解析环境变量字符串
         logger.info("正在解析环境变量...")
         info_dict = {}
@@ -197,17 +244,24 @@ def main():
             if '=' in item:
                 key, value = item.strip().split('=', 1)
                 info_dict[key] = value
-        
+
         # 验证必要的字段
         required_fields = ['first_name', 'last_name', 'username', 'email', 'ocr_url']
         missing_fields = [field for field in required_fields if field not in info_dict]
         if missing_fields:
             logger.error(f"环境变量配置不完整，缺少字段: {missing_fields}")
             raise ValueError(f"环境变量缺少必要字段: {', '.join(missing_fields)}")
-        
+
+        # 解析代理配置
+        proxies = _parse_proxy(info_dict.get('proxies', ''))
+        logger.info(f"代理配置: {proxies}")
+
         logger.info("初始化注册客户端...")
-        register_client = Serv00Register(ocr_url=info_dict['ocr_url'])
-        
+        register_client = Serv00Register(
+            ocr_url=info_dict['ocr_url'],
+            proxies=proxies
+        )
+
         logger.info("开始执行注册流程...")
         register_client.register(
             first_name=info_dict['first_name'],
@@ -215,7 +269,7 @@ def main():
             username=info_dict['username'],
             email=info_dict['email']
         )
-        
+
     except Exception as e:
         logger.error(f"注册失败: {e}")
         raise

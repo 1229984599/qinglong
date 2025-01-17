@@ -4,16 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="添加益丰api签到">
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/MarsCodeWorkspaceAppSettings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/serv00.py" afterDir="false" />
+    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="添加serv00注册任务">
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ephone.py" beforeDir="false" afterPath="$PROJECT_DIR$/ephone.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pdm.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pdm.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/serv00.py" beforeDir="false" afterPath="$PROJECT_DIR$/serv00.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +64,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.general",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -233,7 +228,9 @@
       <workItem from="1735884331708" duration="781000" />
       <workItem from="1736144609001" duration="2991000" />
       <workItem from="1736149385358" duration="469000" />
-      <workItem from="1737094294262" duration="2083000" />
+      <workItem from="1737094294262" duration="2355000" />
+      <workItem from="1737106038069" duration="304000" />
+      <workItem from="1737110674719" duration="774000" />
     </task>
     <task id="LOCAL-00001" summary="添加益丰api签到">
       <option name="closed" value="true" />
@@ -251,7 +248,15 @@
       <option name="project" value="LOCAL" />
       <updated>1736149399292</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="添加serv00注册任务">
+      <option name="closed" value="true" />
+      <created>1737096773391</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1737096773391</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -259,7 +264,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="添加益丰api签到" />
-    <option name="LAST_COMMIT_MESSAGE" value="添加益丰api签到" />
+    <MESSAGE value="添加serv00注册任务" />
+    <option name="LAST_COMMIT_MESSAGE" value="添加serv00注册任务" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -293,7 +299,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/qinglong$serv00.coverage" NAME="serv00 覆盖结果" MODIFIED="1737096595925" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/qinglong$serv00.coverage" NAME="serv00 覆盖结果" MODIFIED="1737111305231" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$ephone.coverage" NAME="ephone 覆盖结果" MODIFIED="1736149125571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$ikun.coverage" NAME="ikun 覆盖结果" MODIFIED="1709563302670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$ztjun.coverage" NAME="ztjun 覆盖结果" MODIFIED="1735782235206" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
