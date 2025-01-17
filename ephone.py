@@ -4,7 +4,7 @@
 # @Author : moxiaoying
 # @Time : 2024/01/27 13:23
 # -------------------------------
-# cron "0 7 * * *" script-path=ephone.py,tag=益丰api签到
+# cron "0 7 * * *" script-path=ephone.py,tag=益丰api签到https://api.ephone.ai/panel
 # 支持多账户：account#password@account2#password2
 import os
 

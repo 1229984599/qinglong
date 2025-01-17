@@ -8,6 +8,7 @@ authors = [
 dependencies = [
     "requests~=2.31.0",
     "beautifulsoup4~=4.12.3",
+    "loguru>=0.7.3",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
