@@ -5,7 +5,10 @@
 # @Time : 2025/01/17 13:23
 # -------------------------------
 # cron "1 * * * *" script-path=serv00.py,tag=serv00注册
-# 支持多账户：serv00_cookie="ocr_url=***;first_name=***;last_name=***;username=***;email=***@gmail.com;proxies=127.0.0.1:7890;"
+# 账户配置格式：serv00_cookie="ocr_url=验证码识别接口地址;first_name=名字;last_name=姓氏;username=用户名;email=邮箱地址;proxy_secret=代理API密钥;proxy_no=代理API编号;"
+# 必填项：ocr_url, first_name, last_name, username, email
+# 可选项：proxy_secret和proxy_no (需同时配置才能启用代理)，对应套餐管理的提取密钥和套餐编号
+# 代理API购买地址：https://www.ipzan.com?pid=e5lllafig
 
 import requests
 import json
@@ -14,9 +17,108 @@ import urllib3
 from typing import Tuple, Optional, Dict, Any
 import os
 from loguru import logger
+import time
 
 # 全局禁用 InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class ProxyManager:
+    def __init__(self, secret: str, no: str):
+        """
+        代理IP管理器初始化
+        
+        Args:
+            secret: API密钥
+            no: API编号
+        """
+        self.api_url = "https://service.ipzan.com/core-extract"
+        self.secret = secret
+        self.no = no
+        self.current_proxy: Optional[Dict[str, Any]] = None
+        self.last_fetch_time = 0
+        self.fetch_interval = 50  # 设置50秒的最小获取间隔
+
+    def _build_api_url(self) -> str:
+        """构建完整的API URL"""
+        params = {
+            'num': 1,
+            'minute': 1,
+            'format': 'json',
+            'protocol': 1,
+            'pool': 'quality',
+            'mode': 'whitelist',
+            'secret': self.secret,
+            'no': self.no
+        }
+        query_string = '&'.join(f'{k}={v}' for k, v in params.items())
+        return f"{self.api_url}?{query_string}"
+
+    def _fetch_new_proxy(self) -> Dict[str, Any]:
+        """从API获取新的代理IP"""
+        try:
+            response = requests.get(self._build_api_url(), timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            
+            if result['code'] != 0:
+                raise ValueError(f"获取代理失败: {result['message']}")
+            
+            if not result.get('data') or not result['data'].get('list'):
+                raise ValueError("代理数据为空")
+            
+            proxy_info = result['data']['list'][0]
+            logger.debug(f"获取到的代理信息: {json.dumps(proxy_info, ensure_ascii=False)}")
+            return proxy_info
+            
+        except Exception as e:
+            logger.error(f"获取代理IP失败: {str(e)}")
+            raise
+
+    def get_proxy(self, force_new: bool = False) -> Dict[str, str]:
+        """
+        获取代理配置
+        
+        Args:
+            force_new: 是否强制获取新代理
+            
+        Returns:
+            代理配置字典
+        """
+        current_time = time.time()
+        
+        # 检查是否需要更新代理
+        if (force_new or 
+            not self.current_proxy or 
+            current_time - self.last_fetch_time >= self.fetch_interval):
+            
+            logger.info("正在获取新的代理IP...")
+            proxy_info = self._fetch_new_proxy()
+            self.current_proxy = proxy_info
+            self.last_fetch_time = current_time
+            
+            logger.info(f"成功获取新代理: {proxy_info['ip']}:{proxy_info['port']}")
+        
+        # 构建代理URL
+        proxy_url = f"http://{self.current_proxy['ip']}:{self.current_proxy['port']}"
+        
+        # 如果有账号密码，则添加到URL中
+        if self.current_proxy.get('account') and self.current_proxy.get('password'):
+            proxy_url = f"http://{self.current_proxy['account']}:{self.current_proxy['password']}@{self.current_proxy['ip']}:{self.current_proxy['port']}"
+        
+        return {
+            "http": proxy_url,
+            "https": proxy_url
+        }
+
+    def is_proxy_valid(self) -> bool:
+        """检查当前代理是否有效"""
+        if not self.current_proxy:
+            return False
+            
+        # 检查代理是否过期
+        expired_time = self.current_proxy.get('expired', 0) / 1000  # 转换为秒
+        return time.time() < expired_time
 
 
 class Serv00Register:
@@ -204,27 +306,6 @@ class Serv00Register:
         logger.debug(f"完整响应: {json.dumps(response, indent=4, ensure_ascii=False)}")
 
 
-def _parse_proxy(proxy_str: str) -> Dict[str, str]:
-    """
-    解析代理字符串为代理配置字典
-    
-    支持的格式:
-    - 域名:端口 (例如: 127.0.0.1:7890)
-    - 完整URL (例如: http://127.0.0.1:7890)
-    """
-    if not proxy_str:
-        return {"http": None, "https": None}
-
-    # 如果没有指定协议，默认添加 http:// 前缀
-    if not proxy_str.startswith(('http://', 'https://')):
-        proxy_str = f"http://{proxy_str}"
-
-    return {
-        "http": proxy_str,
-        "https": proxy_str
-    }
-
-
 def main():
     """主函数示例"""
     logger.info("============= 开始执行 Serv00 注册任务 =============")
@@ -235,7 +316,7 @@ def main():
         if not env_str:
             logger.error("环境变量 serv00_cookie 未设置")
             raise ValueError(
-                "请设置 serv00_cookie 环境变量，格式为: first_name=xxx;last_name=xxx;username=xxx;email=xxx;ocr_url=xxx;proxies=xxx;")
+                "请设置 serv00_cookie 环境变量，格式为: first_name=xxx;last_name=xxx;username=xxx;email=xxx;ocr_url=xxx;proxy_secret=xxx;proxy_no=xxx;")
 
         # 解析环境变量字符串
         logger.info("正在解析环境变量...")
@@ -252,9 +333,20 @@ def main():
             logger.error(f"环境变量配置不完整，缺少字段: {missing_fields}")
             raise ValueError(f"环境变量缺少必要字段: {', '.join(missing_fields)}")
 
-        # 解析代理配置
-        proxies = _parse_proxy(info_dict.get('proxies', ''))
-        logger.info(f"代理配置: {proxies}")
+        # 根据是否同时配置proxy_secret和proxy_no决定是否使用代理
+        proxies = None
+        if 'proxy_secret' in info_dict and 'proxy_no' in info_dict:
+            logger.info("检测到完整的代理配置，正在初始化代理...")
+            proxy_manager = ProxyManager(
+                secret=info_dict['proxy_secret'],
+                no=info_dict['proxy_no']
+            )
+            proxies = proxy_manager.get_proxy()
+            logger.info(f"代理配置: {proxies}")
+        else:
+            if 'proxy_secret' in info_dict or 'proxy_no' in info_dict:
+                logger.warning("代理配置不完整，需要同时设置proxy_secret和proxy_no才能使用代理")
+            logger.info("将使用直接连接")
 
         logger.info("初始化注册客户端...")
         register_client = Serv00Register(
