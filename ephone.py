@@ -7,15 +7,112 @@
 # cron "0 7 * * *" script-path=ephone.py,tag=益丰api签到https://api.ephone.ai/panel
 # 支持多账户：account#password@account2#password2
 import os
-
 import requests
 import time
-
 import hmac
 import hashlib
 import base64
+import traceback
 
 session = requests.Session()
+
+
+class CaptchaSolver:
+    def __init__(self):
+        self.headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+            'cache-control': 'no-store',
+            'origin': 'https://api.ephone.ai',
+            'referer': 'https://api.ephone.ai/login?expired=true',
+            'rix-api-user': '6179',
+            'sec-ch-ua': '"Microsoft Edge";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
+        }
+
+    def get_captcha(self):
+        """获取滑块验证码"""
+        url = 'https://api.ephone.ai/api/captcha/generate'
+        response = session.post(url, headers=self.headers)
+        if response.status_code != 200:
+            raise Exception(f"获取验证码失败: {response.status_code}, {response.text}")
+
+        return response.json()
+
+    def solve_captcha(self, captcha_data):
+        """识别滑块位置"""
+        data = captcha_data.get('data', {})
+        return {
+            "dots": {
+                "x": data.get('x', 31),
+                "y": data.get('y', 31)
+            },
+            "key": {
+                "x": data.get('x', 31),
+                "y": data.get('y', 31),
+                "width": data.get('width', 62),
+                "height": data.get('height', 62),
+                "angle": data.get('angle', 0),
+                "tile_x": data.get('tile_x', 31),
+                "tile_y": data.get('tile_y', 31)
+            }
+        }
+
+    def verify_captcha(self, solve_result):
+        """验证滑块位置"""
+        url = 'https://api.ephone.ai/api/captcha/verify'
+        headers = self.headers.copy()
+        headers['content-type'] = 'application/json'
+
+        payload = {
+            "dots": solve_result["dots"],
+            "key": solve_result["key"]
+        }
+
+        response = session.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            raise Exception(f"验证失败: {response.status_code}, {response.text}")
+
+        result = response.json()
+        return result
+
+    def get_token(self, max_retries=3):
+        """获取token的对外接口"""
+        for retry in range(max_retries):
+            try:
+                # 获取验证码
+                print(f"尝试 {retry + 1}/{max_retries}：正在获取验证码...")
+                captcha_response = self.get_captcha()
+                print(f"验证码获取成功")
+
+                # 识别滑块位置
+                print("正在识别滑块位置...")
+                solve_result = self.solve_captcha(captcha_response)
+                print(f"滑块位置识别完成")
+
+                # 验证滑块位置
+                print("正在验证滑块位置...")
+                verify_result = self.verify_captcha(solve_result)
+
+                if verify_result.get('success') == True:
+                    print("验证成功!")
+                    return verify_result.get('token')
+                else:
+                    print(f"验证失败: {verify_result}")
+                    if retry < max_retries - 1:
+                        time.sleep(2)
+
+            except Exception as e:
+                print(f"发生错误: {str(e)}")
+                print(traceback.format_exc())
+                if retry < max_retries - 1:
+                    print(f"将在2秒后重试...")
+                    time.sleep(2)
+
+        print(f"已达到最大重试次数 {max_retries}，验证失败")
+        return None
 
 
 def generate_signature(data, key='your-secret-key-here', use_base64=False, use_upper=False):
@@ -39,8 +136,16 @@ def generate_signature(data, key='your-secret-key-here', use_base64=False, use_u
 
 
 def login(username, password):
+    # 获取验证码token
+    captcha_solver = CaptchaSolver()
+    token = captcha_solver.get_token()
+
+    if not token:
+        raise Exception("获取验证码token失败")
+
+    # 登录请求
     resp = session.post('https://api.ephone.ai/api/user/login?turnstile=',
-                        json={'username': username, 'password': password}).json()
+                        json={'username': username, 'password': password, 'token': token}).json()
     if resp['success']:
         print(f"{resp['data']['username']}\t登录成功")
         return {

@@ -11,10 +11,16 @@ dependencies = [
     "loguru>=0.7.3",
     "httpx>=0.28.1",
 ]
-requires-python = ">=3.10"
+requires-python = "<3.13,>=3.10"
 readme = "README.md"
 license = {text = "MIT"}
 
 
 [tool.pdm]
 distribution = false
+
+[dependency-groups]
+dev = [
+    "python-dotenv>=1.0.1",
+    "ddddocr>=1.0.6",
+]
