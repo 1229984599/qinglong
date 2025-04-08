@@ -74,7 +74,7 @@ pdm install
 
 在青龙面板环境变量中添加：
 - 变量名：`ephone`
-- 值：支持多账号，格式：`account#password@account2#password2`
+- 值：支持多账号，格式：`account#password account2#password2`
 
 定时任务配置：
 ```bash

@@ -182,7 +182,9 @@ def check_in(user_id=6179):
 
 def main():
     user_cookie = os.getenv("ephone")
-    for user in user_cookie.split('@'):
+    for user in user_cookie.split(' '):
+        if not user:
+            continue
         data = login(*user.split('#'))
         check_in(data['user_id'])
         time.sleep(1)
