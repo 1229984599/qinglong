@@ -14,7 +14,16 @@ import hashlib
 import base64
 import traceback
 
+ocr_url = os.getenv("ocr_url", "https://rould-bot-ddddocr.hf.space/capcode")
+
 session = requests.Session()
+
+
+def base64_to_bytes(base64_str):
+    if "," in base64_str:
+        base64_str = base64_str.split(",")[1]
+    return base64_str
+    # return base64.b64decode(base64_str)
 
 
 class CaptchaSolver:
@@ -32,6 +41,13 @@ class CaptchaSolver:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
         }
 
+    def slide_match(self, background: str, target: str):
+        res = requests.post(ocr_url, json={
+            "backImage": base64_to_bytes(background),
+            "slidingImage": base64_to_bytes(target),
+        }).json()
+        return res.get('result')
+
     def get_captcha(self):
         """获取滑块验证码"""
         url = 'https://api.ephone.ai/api/captcha/generate'
@@ -44,20 +60,16 @@ class CaptchaSolver:
     def solve_captcha(self, captcha_data):
         """识别滑块位置"""
         data = captcha_data.get('data', {})
+        # target_bytes = base64_to_bytes(data["tileImage"])  # 滑块
+        # background_bytes = base64_to_bytes(data["masterImage"])  # 背景
+        # res = det.slide_match(target_bytes, background_bytes, simple_target=True)
+        res = self.slide_match(data["masterImage"], data["tileImage"])
         return {
             "dots": {
-                "x": data.get('x', 31),
-                "y": data.get('y', 31)
+                "x": res,
+                "y": data.get('thumbY', 111)
             },
-            "key": {
-                "x": data.get('x', 31),
-                "y": data.get('y', 31),
-                "width": data.get('width', 62),
-                "height": data.get('height', 62),
-                "angle": data.get('angle', 0),
-                "tile_x": data.get('tile_x', 31),
-                "tile_y": data.get('tile_y', 31)
-            }
+            "key": data.get('dots', ''),
         }
 
     def verify_captcha(self, solve_result):
@@ -85,15 +97,15 @@ class CaptchaSolver:
                 # 获取验证码
                 print(f"尝试 {retry + 1}/{max_retries}：正在获取验证码...")
                 captcha_response = self.get_captcha()
-                print(f"验证码获取成功")
+                # print(f"验证码获取成功")
 
                 # 识别滑块位置
-                print("正在识别滑块位置...")
+                # print("正在识别滑块位置...")
                 solve_result = self.solve_captcha(captcha_response)
-                print(f"滑块位置识别完成")
+                # print(f"滑块位置识别完成")
 
                 # 验证滑块位置
-                print("正在验证滑块位置...")
+                # print("正在验证滑块位置...")
                 verify_result = self.verify_captcha(solve_result)
 
                 if verify_result.get('success') == True:
@@ -149,13 +161,15 @@ def login(username, password):
     if resp['success']:
         print(f"{resp['data']['username']}\t登录成功")
         return {
-            'user_id': resp['data']['id'],
             'username': resp['data']['username'],
         }
     raise Exception(resp['message'])
 
 
-def check_in(user_id=6179):
+def check_in(username):
+    # 获取验证码token
+    captcha_solver = CaptchaSolver()
+    token = captcha_solver.get_token()
     url = "https://api.ephone.ai/api/user/checkin"
 
     # 获取当前时间的 10 位时间戳
@@ -163,12 +177,13 @@ def check_in(user_id=6179):
     # current_timestamp = '1736144324'
 
     querystring = {"timestamp": str(current_timestamp),
-                   "signature": generate_signature(f'{current_timestamp}:{user_id}'),
-                   "timezone": "Asia/Shanghai"}
+                   "signature": generate_signature(f'{current_timestamp}:{username}'),
+                   "timezone": "Asia/Shanghai",
+                   "slide_captcha": token
+                   }
 
     payload = ""
     headers = {
-        "rix-api-user": str(user_id),
         "Accept": "*/*",
         "Accept-Encoding": "gzip, deflate, br",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
@@ -186,7 +201,7 @@ def main():
         if not user:
             continue
         data = login(*user.split('#'))
-        check_in(data['user_id'])
+        check_in(**data)
         time.sleep(1)
         print('等待1秒后开始下一账号签到')
 

@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:ed7b00cb9ecefeadc34646e809a51ee9184b39b8caec61bf682f0beef0b4a670"
+content_hash = "sha256:4ad037f2c397905f52479bbd191d758334487e467943d5fc6efc958fef9a8abd"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.13"
@@ -492,6 +492,22 @@ files = [
     {file = "pillow-11.1.0-pp310-pypy310_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:d3d8da4a631471dfaf94c10c85f5277b1f8e42ac42bade1ac67da4b4a7359b73"},
     {file = "pillow-11.1.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:4637b88343166249fe8aa94e7c4a62a180c4b3898283bb5d3d2fd5fe10d8e4e0"},
     {file = "pillow-11.1.0.tar.gz", hash = "sha256:368da70808b36d73b4b390a8ffac11069f8a5c85f29eff1f1b01bcf3ef5b2a20"},
+]
+
+[[package]]
+name = "ppllocr"
+version = "2.2"
+requires_python = ">=3.10"
+summary = "High-performance Robust OCR powered"
+groups = ["dev"]
+dependencies = [
+    "numpy",
+    "onnxruntime",
+    "opencv-python-headless",
+]
+files = [
+    {file = "ppllocr-2.2-py3-none-any.whl", hash = "sha256:44c157bdfaf34f1b0b38bedbfe64fbee2b2fbb8d23802a8c7544a92c700b15c8"},
+    {file = "ppllocr-2.2.tar.gz", hash = "sha256:2103eae1472a58bf74846c7eb318de2d3a990d0a652f54aa917cf476e73fbf26"},
 ]
 
 [[package]]
