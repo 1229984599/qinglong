@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="更改益丰多账户设置方式&quot;@符号替换为空格”（账号#密码 账号#密码），主要为了兼容google邮箱登录方式">
+    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="修复ephone滑动验证码问题">
+      <change afterPath="$PROJECT_DIR$/anyrouter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ephone.py" beforeDir="false" afterPath="$PROJECT_DIR$/ephone.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pdm.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pdm.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,8 +16,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="JavaScript File" />
         <option value="Python Script" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -50,6 +48,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Node.js.a.js.executor": "Run",
+    "Python.anyrouter.executor": "Debug",
     "Python.caiyun.executor": "Debug",
     "Python.captcha_solver.executor": "Debug",
     "Python.ephone.executor": "Run",
@@ -77,7 +76,30 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.ephone">
+  <component name="RunManager" selected="Python.anyrouter">
+    <configuration name="anyrouter" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="qinglong" />
+      <option name="ENV_FILES" value="$PROJECT_DIR$/.env" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/anyrouter.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="caiyun" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="qinglong" />
       <option name="ENV_FILES" value="$PROJECT_DIR$/.env" />
@@ -147,29 +169,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="glados" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="qinglong" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/glados.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="ikun" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="qinglong" />
       <option name="ENV_FILES" value="$PROJECT_DIR$/.env" />
@@ -219,19 +218,19 @@
     </configuration>
     <list>
       <item itemvalue="Python.main" />
+      <item itemvalue="Python.anyrouter" />
       <item itemvalue="Python.captcha_solver" />
       <item itemvalue="Python.ephone" />
       <item itemvalue="Python.caiyun" />
-      <item itemvalue="Python.glados" />
       <item itemvalue="Python.ikun" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.anyrouter" />
         <item itemvalue="Python.ephone" />
         <item itemvalue="Python.captcha_solver" />
         <item itemvalue="Python.caiyun" />
         <item itemvalue="Python.ikun" />
-        <item itemvalue="Python.glados" />
       </list>
     </recent_temporary>
   </component>
@@ -267,7 +266,8 @@
       <workItem from="1737357179680" duration="7552000" />
       <workItem from="1739607447316" duration="3080000" />
       <workItem from="1744000317645" duration="12130000" />
-      <workItem from="1768730797245" duration="6634000" />
+      <workItem from="1768730797245" duration="8086000" />
+      <workItem from="1768807387719" duration="2367000" />
     </task>
     <task id="LOCAL-00001" summary="添加益丰api签到">
       <option name="closed" value="true" />
@@ -309,7 +309,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744081953282</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="修复ephone滑动验证码问题">
+      <option name="closed" value="true" />
+      <created>1768738676913</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1768738676913</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -343,7 +351,8 @@
     <MESSAGE value="添加serv00注册任务" />
     <MESSAGE value="修复益丰签到" />
     <MESSAGE value="更改益丰多账户设置方式&quot;@符号替换为空格”（账号#密码 账号#密码），主要为了兼容google邮箱登录方式" />
-    <option name="LAST_COMMIT_MESSAGE" value="更改益丰多账户设置方式&quot;@符号替换为空格”（账号#密码 账号#密码），主要为了兼容google邮箱登录方式" />
+    <MESSAGE value="修复ephone滑动验证码问题" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复ephone滑动验证码问题" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -400,10 +409,11 @@
     <SUITE FILE_PATH="coverage/qinglong$pzhttp.coverage" NAME="pzhttp 覆盖结果" MODIFIED="1737359099147" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$captcha_solver.coverage" NAME="captcha_solver 覆盖结果" MODIFIED="1744005760245" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$caiyun.coverage" NAME="caiyun 覆盖结果" MODIFIED="1739610371423" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/qinglong$anyrouter.coverage" NAME="anyrouter 覆盖结果" MODIFIED="1768809737651" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$enshan.coverage" NAME="enshan 覆盖结果" MODIFIED="1738586583154" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$serv00.coverage" NAME="serv00 覆盖结果" MODIFIED="1739427353643" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$test.coverage" NAME="test 覆盖结果" MODIFIED="1737470950769" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/qinglong$ephone.coverage" NAME="ephone 覆盖结果" MODIFIED="1768738460248" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/qinglong$ephone.coverage" NAME="ephone 覆盖结果" MODIFIED="1768738629737" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$ikun.coverage" NAME="ikun 覆盖结果" MODIFIED="1739427396364" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$glados.coverage" NAME="glados 覆盖结果" MODIFIED="1739427359006" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/qinglong$ztjun.coverage" NAME="ztjun 覆盖结果" MODIFIED="1735782235206" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
