@@ -152,7 +152,7 @@ def generate_signature(data, key='your-secret-key-here', use_base64=False, use_u
     return result
 
 
-def login(username, password):
+def login(account, password):
     # 获取验证码token
     captcha_solver = CaptchaSolver()
     token = captcha_solver.get_token()
@@ -161,8 +161,9 @@ def login(username, password):
         raise Exception("获取验证码token失败")
 
     # 登录请求
+    # 接口字段名为 username，这里传入邮箱账号进行登录。
     resp = session.post('https://api.ephone.ai/api/user/login?turnstile=',
-                        json={'username': username, 'password': password, 'token': token}).json()
+                        json={'username': account, 'password': password, 'token': token}).json()
     if resp['success']:
         print(f"{resp['data']['username']}\t登录成功")
         return {
@@ -216,19 +217,26 @@ def parse_accounts_from_json_data(data):
             print(f"JSON账号第 {idx} 项不是对象，已跳过")
             continue
 
+        email = item.get("email")
         username = item.get("username")
         password = item.get("password")
-        if username is None or password is None:
-            print(f"JSON账号第 {idx} 项缺少 username/password，已跳过")
+
+        # JSON 环境变量格式优先使用 email/password，兼容旧数据回退 username/password。
+        account = email if email is not None else username
+        if account is None or password is None:
+            print(f"JSON账号第 {idx} 项缺少 email/password，已跳过")
             continue
 
-        username = str(username).strip()
+        account = str(account).strip()
         password = str(password).strip()
-        if not username or not password:
-            print(f"JSON账号第 {idx} 项 username/password 为空，已跳过")
+        if not account or not password:
+            print(f"JSON账号第 {idx} 项 email/password 为空，已跳过")
             continue
 
-        accounts.append((username, password))
+        if not email and username:
+            print(f"JSON账号第 {idx} 项未提供 email，已回退使用 username")
+
+        accounts.append((account, password))
 
     return accounts
 
@@ -356,95 +364,77 @@ def write_progress(data):
     os.replace(tmp_file, progress_file)
 
 
-def save_failed_progress(date_text, index, total, username, error):
+def get_completed_accounts(date_text):
+    """获取今日已完成签到的账号集合"""
+    progress = read_progress()
+    if progress.get("date") != date_text:
+        return set()
+    return set(progress.get("completed_accounts", []))
+
+
+def save_account_completed(date_text, completed_accounts, all_done=False):
+    """记录一个账号签到完成"""
     write_progress({
         "date": date_text,
-        "next_index": index,
-        "total": total,
-        "completed": False,
-        "last_failed_user": username,
+        "completed_accounts": sorted(completed_accounts),
+        "all_done": all_done,
+        "updated_at": now_str(),
+    })
+
+
+def save_account_failed(date_text, completed_accounts, failed_account, error):
+    """记录账号签到失败"""
+    write_progress({
+        "date": date_text,
+        "completed_accounts": sorted(completed_accounts),
+        "all_done": False,
+        "last_failed_account": failed_account,
         "last_error": str(error),
         "updated_at": now_str(),
     })
 
 
-def save_running_progress(date_text, next_index, total):
-    write_progress({
-        "date": date_text,
-        "next_index": next_index,
-        "total": total,
-        "completed": False,
-        "updated_at": now_str(),
-    })
-
-
-def save_completed_progress(date_text, total):
-    write_progress({
-        "date": date_text,
-        "next_index": 0,
-        "total": total,
-        "completed": True,
-        "updated_at": now_str(),
-    })
-
-
-def get_start_index(total):
-    date_text = today_str()
-    progress = read_progress()
-
-    if progress.get("date") != date_text:
-        return 0, date_text
-
-    if progress.get("completed") is True:
-        print(f"{date_text} 今日账号已全部执行完成，本次跳过")
-        return total, date_text
-
-    start_index = progress.get("next_index", 0)
-    if not isinstance(start_index, int):
-        start_index = 0
-
-    if start_index < 0:
-        start_index = 0
-    if start_index > total:
-        start_index = total
-
-    failed_user = progress.get("last_failed_user")
-    if failed_user:
-        print(f"检测到上次失败账号: {failed_user}，本次将从第 {start_index + 1} 个账号继续")
-
-    return start_index, date_text
-
-
 def main():
     accounts = load_accounts()
     total = len(accounts)
+    date_text = today_str()
 
-    start_index, date_text = get_start_index(total)
-    if start_index >= total:
+    # 读取今日已完成的账号集合
+    completed = get_completed_accounts(date_text)
+
+    # 过滤出待执行的账号（保持原始顺序）
+    pending = [(acct, pwd) for acct, pwd in accounts if acct not in completed]
+
+    if not pending:
+        print(f"{date_text} 所有 {total} 个账号今日已全部签到完成，无需重复执行")
         return
 
-    print(f"本次从第 {start_index + 1}/{total} 个账号开始执行")
+    if completed:
+        print(f"今日已完成 {len(completed)}/{total} 个账号，剩余 {len(pending)} 个待执行")
+    else:
+        print(f"今日共 {total} 个账号待执行")
 
-    for index in range(start_index, total):
-        username, password = accounts[index]
+    for i, (account, password) in enumerate(pending):
         try:
-            print(f"\n[{index + 1}/{total}] 开始处理账号: {username}")
-            data = login(username, password)
+            print(f"\n[{len(completed) + 1}/{total}] 开始处理账号: {account}")
+            data = login(account, password)
             check_in(**data)
-            next_index = index + 1
-            if next_index < total:
-                save_running_progress(date_text, next_index, total)
-            else:
-                save_completed_progress(date_text, total)
+
+            # 签到成功，立即记录
+            completed.add(account)
+            all_done = len(completed) >= total
+            save_account_completed(date_text, completed, all_done=all_done)
+
+            if all_done:
                 print(f"{date_text} 今日账号已全部执行完成")
         except Exception as e:
-            save_failed_progress(date_text, index, total, username, e)
-            print(f"{username}\t执行失败: {e}")
+            save_account_failed(date_text, completed, account, e)
+            print(f"{account}\t执行失败: {e}")
             print(traceback.format_exc())
-            print(f"已记录断点，下次将从第 {index + 1}/{total} 个账号继续")
+            print(f"已记录断点，下次将跳过已完成的 {len(completed)} 个账号继续")
             raise
 
-        if index + 1 < total:
+        if i + 1 < len(pending):
             time.sleep(5)
             print("等待5秒后开始下一账号签到")
 

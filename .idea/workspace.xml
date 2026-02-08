@@ -4,13 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="修复ephone滑动验证码问题">
-      <changelist_data name="moxiaoying" email="768091671@qq.com" automatic="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/qinglong.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/qinglong.iml" afterDir="false" />
+    <list default="true" id="e067bf07-b073-44d0-bb6e-0270e97c8ca9" name="更改" comment="ephone 支持json格式环境变量。支持断电续传">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ephone.py" beforeDir="false" afterPath="$PROJECT_DIR$/ephone.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -337,7 +332,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768738676913</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="ephone 支持json格式环境变量。支持断电续传">
+      <option name="closed" value="true" />
+      <created>1770549118424</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1770549118424</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -372,7 +375,8 @@
     <MESSAGE value="修复益丰签到" />
     <MESSAGE value="更改益丰多账户设置方式&quot;@符号替换为空格”（账号#密码 账号#密码），主要为了兼容google邮箱登录方式" />
     <MESSAGE value="修复ephone滑动验证码问题" />
-    <option name="LAST_COMMIT_MESSAGE" value="修复ephone滑动验证码问题" />
+    <MESSAGE value="ephone 支持json格式环境变量。支持断电续传" />
+    <option name="LAST_COMMIT_MESSAGE" value="ephone 支持json格式环境变量。支持断电续传" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -419,7 +423,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ephone.py</url>
-          <line>311</line>
+          <line>319</line>
           <option name="timeStamp" value="41" />
         </line-breakpoint>
       </breakpoints>
