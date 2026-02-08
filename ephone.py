@@ -4,17 +4,22 @@
 # @Author : moxiaoying
 # @Time : 2024/01/27 13:23
 # -------------------------------
-# cron "0 7 * * *" script-path=ephone.py,tag=益丰api签到https://api.ephone.ai/panel
+# cron "*/30 7-23 * * *" script-path=ephone.py,tag=益丰api签到https://api.ephone.ai/panel
 # 支持多账户：account#password@account2#password2
 import os
+import json
+import re
 import requests
 import time
 import hmac
 import hashlib
 import base64
 import traceback
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 ocr_url = os.getenv("ocr_url", "https://rould-bot-ddddocr.hf.space/capcode")
+progress_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephone_progress.json")
 
 session = requests.Session()
 
@@ -195,15 +200,253 @@ def check_in(username):
     print(response.text)
 
 
-def main():
-    user_cookie = os.getenv("ephone")
-    for user in user_cookie.split(' '):
-        if not user:
+def parse_accounts_from_json_data(data):
+    if isinstance(data, dict):
+        for key in ("accounts", "data", "items", "list"):
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+
+    if not isinstance(data, list):
+        return []
+
+    accounts = []
+    for idx, item in enumerate(data, start=1):
+        if not isinstance(item, dict):
+            print(f"JSON账号第 {idx} 项不是对象，已跳过")
             continue
-        data = login(*user.split('#'))
-        check_in(**data)
-        time.sleep(1)
-        print('等待1秒后开始下一账号签到')
+
+        username = item.get("username")
+        password = item.get("password")
+        if username is None or password is None:
+            print(f"JSON账号第 {idx} 项缺少 username/password，已跳过")
+            continue
+
+        username = str(username).strip()
+        password = str(password).strip()
+        if not username or not password:
+            print(f"JSON账号第 {idx} 项 username/password 为空，已跳过")
+            continue
+
+        accounts.append((username, password))
+
+    return accounts
+
+
+def parse_accounts_from_legacy(raw_value):
+    # 历史格式：account#password account2#password2
+    # 兼容单行用 @ 分隔多账号的旧写法：account#password@account2#password2
+    if raw_value.count("#") > 1 and "@" in raw_value and not re.search(r"\s", raw_value):
+        items = [i for i in raw_value.split("@") if i]
+    else:
+        items = raw_value.split()
+
+    accounts = []
+    for item in items:
+        if "#" not in item:
+            print(f"环境变量账号格式错误，已跳过: {item}")
+            continue
+
+        username, password = item.split("#", 1)
+        username = username.strip()
+        password = password.strip()
+        if not username or not password:
+            print(f"环境变量账号缺少用户名或密码，已跳过: {item}")
+            continue
+
+        accounts.append((username, password))
+    return accounts
+
+
+def strip_wrapping_quotes(value):
+    value = (value or "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1].strip()
+    return value
+
+
+def parse_accounts_from_env(raw_value):
+    value = (raw_value or "").strip()
+    if not value:
+        return []
+
+    # 新格式：ephone 直接放 accounts_ephone.json 的 JSON 字符串
+    # 兼容外层被单/双引号包裹以及 \n 换行转义。
+    json_candidates = []
+
+    def add_candidate(candidate):
+        candidate = (candidate or "").strip()
+        if candidate and candidate not in json_candidates:
+            json_candidates.append(candidate)
+
+    add_candidate(value)
+    add_candidate(strip_wrapping_quotes(value))
+    for candidate in list(json_candidates):
+        if "\\n" in candidate:
+            add_candidate(candidate.replace("\\n", "\n"))
+
+    parse_error = None
+    for candidate in json_candidates:
+        if candidate[0] not in "[{":
+            continue
+        try:
+            json_accounts = parse_accounts_from_json_data(json.loads(candidate))
+            if json_accounts:
+                print(f"使用环境变量 ephone(JSON格式) 账号，共 {len(json_accounts)} 个")
+                return json_accounts
+            print("ephone JSON格式已识别，但没有可用账号，将尝试旧格式解析")
+        except Exception as e:
+            parse_error = e
+
+    if parse_error is not None:
+        print(f"ephone JSON解析失败，将尝试旧格式解析: {parse_error}")
+
+    legacy_accounts = parse_accounts_from_legacy(strip_wrapping_quotes(value))
+    if legacy_accounts:
+        print(f"使用环境变量 ephone(旧格式) 账号，共 {len(legacy_accounts)} 个")
+    return legacy_accounts
+
+
+def load_accounts():
+    env_value = os.getenv("ephone", "").strip()
+    if not env_value:
+        raise ValueError("环境变量 ephone 未设置")
+
+    accounts = parse_accounts_from_env(env_value)
+    if accounts:
+        return accounts
+
+    raise ValueError("环境变量 ephone 中未解析到可用账号")
+
+
+def today_str():
+    return now_shanghai().strftime("%Y-%m-%d")
+
+
+def now_str():
+    return now_shanghai().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def now_shanghai():
+    try:
+        return datetime.now(ZoneInfo("Asia/Shanghai"))
+    except Exception:
+        # 兜底：当系统缺少 IANA 时区数据时，按 UTC+8 计算。
+        return datetime.utcnow() + timedelta(hours=8)
+
+
+def read_progress():
+    if not os.path.exists(progress_file):
+        return {}
+
+    try:
+        with open(progress_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception as e:
+        print(f"读取断点文件失败，将从头开始: {e}")
+    return {}
+
+
+def write_progress(data):
+    tmp_file = f"{progress_file}.tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_file, progress_file)
+
+
+def save_failed_progress(date_text, index, total, username, error):
+    write_progress({
+        "date": date_text,
+        "next_index": index,
+        "total": total,
+        "completed": False,
+        "last_failed_user": username,
+        "last_error": str(error),
+        "updated_at": now_str(),
+    })
+
+
+def save_running_progress(date_text, next_index, total):
+    write_progress({
+        "date": date_text,
+        "next_index": next_index,
+        "total": total,
+        "completed": False,
+        "updated_at": now_str(),
+    })
+
+
+def save_completed_progress(date_text, total):
+    write_progress({
+        "date": date_text,
+        "next_index": 0,
+        "total": total,
+        "completed": True,
+        "updated_at": now_str(),
+    })
+
+
+def get_start_index(total):
+    date_text = today_str()
+    progress = read_progress()
+
+    if progress.get("date") != date_text:
+        return 0, date_text
+
+    if progress.get("completed") is True:
+        print(f"{date_text} 今日账号已全部执行完成，本次跳过")
+        return total, date_text
+
+    start_index = progress.get("next_index", 0)
+    if not isinstance(start_index, int):
+        start_index = 0
+
+    if start_index < 0:
+        start_index = 0
+    if start_index > total:
+        start_index = total
+
+    failed_user = progress.get("last_failed_user")
+    if failed_user:
+        print(f"检测到上次失败账号: {failed_user}，本次将从第 {start_index + 1} 个账号继续")
+
+    return start_index, date_text
+
+
+def main():
+    accounts = load_accounts()
+    total = len(accounts)
+
+    start_index, date_text = get_start_index(total)
+    if start_index >= total:
+        return
+
+    print(f"本次从第 {start_index + 1}/{total} 个账号开始执行")
+
+    for index in range(start_index, total):
+        username, password = accounts[index]
+        try:
+            print(f"\n[{index + 1}/{total}] 开始处理账号: {username}")
+            data = login(username, password)
+            check_in(**data)
+            next_index = index + 1
+            if next_index < total:
+                save_running_progress(date_text, next_index, total)
+            else:
+                save_completed_progress(date_text, total)
+                print(f"{date_text} 今日账号已全部执行完成")
+        except Exception as e:
+            save_failed_progress(date_text, index, total, username, e)
+            print(f"{username}\t执行失败: {e}")
+            print(traceback.format_exc())
+            print(f"已记录断点，下次将从第 {index + 1}/{total} 个账号继续")
+            raise
+
+        if index + 1 < total:
+            time.sleep(5)
+            print("等待5秒后开始下一账号签到")
 
 
 if __name__ == '__main__':

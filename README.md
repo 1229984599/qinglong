@@ -74,11 +74,25 @@ pdm install
 
 在青龙面板环境变量中添加：
 - 变量名：`ephone`
-- 值：支持多账号，格式：`account#password account2#password2`
+- 值：仅使用这一个变量，支持两种格式（多账号）：
+- 旧格式：`account#password account2#password2`
+- JSON格式：与 `accounts_ephone.json` 同结构的 JSON 字符串（每项至少包含 `username`、`password`）
+- JSON示例：`[{"username":"user1","password":"pass1"},{"username":"user2","password":"pass2"}]`
 
-定时任务配置：
+断点续跑机制：
+- 脚本会在同目录写入 `ephone_progress.json`
+- 当某个账号执行失败时，会记录当前账号位置并立即停止
+- 下次运行会从失败账号继续
+- 当天全部账号执行完成后，后续同一天触发会自动跳过
+
+定时任务配置（按账号量选择）：
+- 基础（每天跑一次）：
 ```bash
 0 7 * * * python3 ephone.py
+```
+- 推荐（账号多/IP容易被限制，开启断点续跑）：
+```bash
+*/30 7-23 * * * python3 ephone.py
 ```
 
 ### 5. ztjun博客签到
