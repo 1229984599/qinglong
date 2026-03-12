@@ -9,7 +9,6 @@
 import os
 import json
 import re
-import requests
 import time
 import hmac
 import hashlib
@@ -17,9 +16,15 @@ import base64
 import traceback
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import requests
 
 ocr_url = os.getenv("ocr_url", "https://rould-bot-ddddocr.hf.space/capcode")
 progress_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephone_progress.json")
+base_url = os.getenv("ephone_base_url", "https://platform.ephone.ai").rstrip("/")
+
+captcha_min_interval = int(os.getenv("ephone_captcha_min_interval", "10"))
+account_delay_seconds = int(os.getenv("ephone_account_delay_seconds", "25"))
+captcha_next_ready_at = 0.0
 
 session = requests.Session()
 
@@ -31,19 +36,57 @@ def base64_to_bytes(base64_str):
     # return base64.b64decode(base64_str)
 
 
+def extract_wait_seconds(message):
+    if not message:
+        return None
+
+    if isinstance(message, dict):
+        if isinstance(message.get("wait_seconds"), int):
+            return message["wait_seconds"]
+        message = json.dumps(message, ensure_ascii=False)
+
+    match = re.search(r"wait_seconds[\"'=:\s]+(\d+)", str(message))
+    if match:
+        return int(match.group(1))
+
+    match = re.search(r"等待\s*(\d+)\s*秒", str(message))
+    if match:
+        return int(match.group(1))
+
+    return None
+
+
+def wait_for_captcha_window():
+    global captcha_next_ready_at
+    now = time.time()
+    if captcha_next_ready_at > now:
+        sleep_seconds = max(1, int(captcha_next_ready_at - now + 0.999))
+        print(f"验证码冷却中，等待 {sleep_seconds} 秒...")
+        time.sleep(sleep_seconds)
+
+
+def bump_captcha_window(wait_seconds=None):
+    global captcha_next_ready_at
+    cooldown = wait_seconds if wait_seconds is not None else captcha_min_interval
+    captcha_next_ready_at = max(captcha_next_ready_at, time.time() + max(0, cooldown))
+
+
 class CaptchaSolver:
     def __init__(self):
+        sign_in_url = f"{base_url}/sign-in?redirect=%2Fdashboard"
         self.headers = {
             'accept': 'application/json, text/plain, */*',
-            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+            'accept-language': 'en',
             'cache-control': 'no-store',
-            'origin': 'https://api.ephone.ai',
-            'referer': 'https://api.ephone.ai/login?expired=true',
-            'rix-api-user': '6179',
-            'sec-ch-ua': '"Microsoft Edge";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+            'origin': base_url,
+            'referer': sign_in_url,
+            'sec-ch-ua': '"Microsoft Edge";v="145", "Not:A-Brand";v="99", "Chromium";v="145"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0'
         }
 
     def slide_match(self, background: str, target: str):
@@ -55,9 +98,14 @@ class CaptchaSolver:
 
     def get_captcha(self):
         """获取滑块验证码"""
-        url = 'https://api.ephone.ai/api/captcha/generate'
+        wait_for_captcha_window()
+        url = f'{base_url}/api/captcha/generate'
         response = session.post(url, headers=self.headers)
         if response.status_code != 200:
+            wait_seconds = extract_wait_seconds(response.text)
+            if wait_seconds:
+                bump_captcha_window(wait_seconds)
+                raise Exception(f"获取验证码频率受限，请等待 {wait_seconds} 秒后再试")
             raise Exception(f"获取验证码失败: {response.status_code}, {response.text}")
 
         return response.json()
@@ -74,12 +122,12 @@ class CaptchaSolver:
                 "x": res,
                 "y": data.get('thumbY', 111)
             },
-            "key": data.get('dots', ''),
+            "key": data.get('captKey') or data.get('dots', ''),
         }
 
     def verify_captcha(self, solve_result):
         """验证滑块位置"""
-        url = 'https://api.ephone.ai/api/captcha/verify'
+        url = f'{base_url}/api/captcha/verify'
         headers = self.headers.copy()
         headers['content-type'] = 'application/json'
 
@@ -90,10 +138,33 @@ class CaptchaSolver:
 
         response = session.post(url, headers=headers, json=payload)
         if response.status_code != 200:
+            wait_seconds = extract_wait_seconds(response.text)
+            if wait_seconds:
+                bump_captcha_window(wait_seconds)
+                raise Exception(f"验证频率受限，请等待 {wait_seconds} 秒后再试")
             raise Exception(f"验证失败: {response.status_code}, {response.text}")
 
         result = response.json()
         return result
+
+    def fetch_slide_token(self):
+        """在 verify 成功后，从同一会话提取 slide token。"""
+        response = session.post(f'{base_url}/api/captcha/slide', headers=self.headers)
+        if response.status_code != 200:
+            wait_seconds = extract_wait_seconds(response.text)
+            if wait_seconds:
+                bump_captcha_window(wait_seconds)
+            raise Exception(f"获取 slide token 失败: {response.status_code}, {response.text}")
+
+        result = response.json()
+        if result.get('success') and result.get('data'):
+            bump_captcha_window()
+            return result['data']
+
+        wait_seconds = extract_wait_seconds(result)
+        if wait_seconds:
+            bump_captcha_window(wait_seconds)
+        raise Exception(f"获取 slide token 失败: {result}")
 
     def get_token(self, max_retries=3):
         """获取token的对外接口"""
@@ -114,19 +185,20 @@ class CaptchaSolver:
                 verify_result = self.verify_captcha(solve_result)
 
                 if verify_result.get('success') == True:
-                    print("验证成功!")
-                    return verify_result.get('token')
-                else:
-                    print(f"验证失败: {verify_result}")
-                    if retry < max_retries - 1:
-                        time.sleep(2)
+                    return self.fetch_slide_token()
+
+                print(f"验证失败: {verify_result}")
+                if retry < max_retries - 1:
+                    time.sleep(2)
 
             except Exception as e:
                 print(f"发生错误: {str(e)}")
                 print(traceback.format_exc())
                 if retry < max_retries - 1:
-                    print(f"将在2秒后重试...")
-                    time.sleep(2)
+                    wait_seconds = extract_wait_seconds(str(e))
+                    sleep_seconds = wait_seconds if wait_seconds else 2
+                    print(f"将在{sleep_seconds}秒后重试...")
+                    time.sleep(sleep_seconds)
 
         print(f"已达到最大重试次数 {max_retries}，验证失败")
         return None
@@ -162,8 +234,12 @@ def login(account, password):
 
     # 登录请求
     # 接口字段名为 username，这里传入邮箱账号进行登录。
-    resp = session.post('https://api.ephone.ai/api/user/login?turnstile=',
-                        json={'username': account, 'password': password, 'token': token}).json()
+    login_url = f'{base_url}/api/user/login'
+    resp = session.post(
+        login_url,
+        params={'slide_captcha': token},
+        json={'username': account, 'password': password}
+    ).json()
     if resp['success']:
         print(f"{resp['data']['username']}\t登录成功")
         return {
@@ -176,7 +252,7 @@ def check_in(username):
     # 获取验证码token
     captcha_solver = CaptchaSolver()
     token = captcha_solver.get_token()
-    url = "https://api.ephone.ai/api/user/checkin"
+    url = f"{base_url}/api/user/checkin"
 
     # 获取当前时间的 10 位时间戳
     current_timestamp = int(time.time())
@@ -340,7 +416,7 @@ def now_shanghai():
         return datetime.now(ZoneInfo("Asia/Shanghai"))
     except Exception:
         # 兜底：当系统缺少 IANA 时区数据时，按 UTC+8 计算。
-        return datetime.utcnow() + timedelta(hours=8)
+        return datetime.now() + timedelta(hours=8)
 
 
 def read_progress():
@@ -435,8 +511,8 @@ def main():
             raise
 
         if i + 1 < len(pending):
-            time.sleep(5)
-            print("等待5秒后开始下一账号签到")
+            time.sleep(account_delay_seconds)
+            print(f"等待{account_delay_seconds}秒后开始下一账号签到")
 
 
 if __name__ == '__main__':
